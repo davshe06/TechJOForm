@@ -356,6 +356,71 @@ textarea { resize: vertical; }
 }
 .chip span:hover { border-color: var(--accent); }
 
+/* user-added chip values */
+.chip.custom input:checked + span {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* inline "+ Other…" adder at the end of a chip group */
+.chip-add input {
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  width: 110px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  min-height: 0;
+}
+.chip-add input:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--accent);
+  width: 180px;
+}
+.chip-add input::placeholder { color: var(--muted); }
+
+/* add-your-own controls (focus areas, stack categories) */
+.custom-add { margin: 14px 0 2px; }
+.custom-add-row { display: flex; gap: 8px; }
+.custom-add-row input { flex: 1; }
+.custom-add-row .btn { white-space: nowrap; }
+.custom-remove-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.chip-remove {
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+.chip-remove:hover { border-color: #d63c2e; color: #d63c2e; }
+
+/* remove button on custom allocator rows */
+.alloc-remove {
+  margin-left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.alloc-remove:hover { border-color: #d63c2e; color: #d63c2e; }
+
 /* tips */
 .tips { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
 .tip {

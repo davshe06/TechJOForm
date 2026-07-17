@@ -64,7 +64,8 @@ function ensureRole(id) {
   if (!id) return null;
   if (!state.roles[id]) state.roles[id] = { stack: {}, success: {}, areas: {}, deepDives: {} };
   const r = state.roles[id];
-  (ROLES[id].focusAreas || []).forEach(a => {
+  if (!r.custom) r.custom = { areas: [], stack: [] };
+  ROLES[id].focusAreas.concat((r.custom.areas || []).map(customAreaDef)).forEach(a => {
     if (!r.areas[a.id]) r.areas[a.id] = { priority: "skip", pct: 0 };
     if (!r.deepDives[a.id]) r.deepDives[a.id] = {};
   });
@@ -72,6 +73,35 @@ function ensureRole(id) {
 }
 
 function roleState() { return ensureRole(state.roleId); }
+
+/* ---------- custom (user-added) entries ----------
+   Custom focus areas and stack categories live in the job-order state
+   (state.roles[id].custom), so "Start new job order" clears them. */
+
+function slugId(label) {
+  return "custom_" + label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "")
+    + "_" + Math.random().toString(36).slice(2, 6);
+}
+
+/* A user-added focus area gets a generic deep dive. */
+function customAreaDef(c) {
+  return { id: c.id, label: c.label, icon: "➕", custom: true, deepDive: {
+    intro: "Custom focus area — capture what it involves and how the client will evaluate it.",
+    questions: [
+      { id: "details", type: "textarea", label: "What does this involve? Key requirements?",
+        placeholder: "Responsibilities, expectations, seniority…" },
+      { id: "tools", type: "text", label: "Specific tools / skills?",
+        placeholder: "Tools, platforms, certifications…" }
+    ],
+    tips: [] } };
+}
+
+/* Built-in focus areas for the active role plus any user-added ones. */
+function roleFocusAreas() {
+  const role = activeRole();
+  if (!role) return [];
+  return role.focusAreas.concat((roleState().custom.areas || []).map(customAreaDef));
+}
 
 /* Used by tip functions in roles.js */
 function areaPriority(s, areaId) {
@@ -119,7 +149,9 @@ function configStepDef(key) {
   }
   if (key === "stack") {
     if (!role) return null;
+    const rs = roleState();
     const questions = role.stackCategories.map(c => ({ id: c.id, type: "text", label: c.label, placeholder: c.placeholder }))
+      .concat((rs.custom.stack || []).map(c => ({ id: c.id, type: "text", label: c.label, placeholder: "Tools…", custom: true })))
       .concat([
         { id: "ai_usage", type: "chips", label: "How are you currently using AI in this function?", options: role.aiUseCases },
         { id: "ai_requirement", type: "radio", label: "Is AI experience preferred or required?",
@@ -130,7 +162,48 @@ function configStepDef(key) {
       questions,
       tips: [{ when: a => a.ai_requirement === "Required" && (a.ai_usage || []).length === 0,
         text: "AI experience is 'required' but they couldn't name current AI use cases — clarify what AI skill they'd actually test for." }],
-      answers: roleState().stack
+      answers: rs.stack,
+      extra: (container) => {
+        const box = el("div", "custom-add");
+        const row = el("div", "custom-add-row");
+        const input = el("input");
+        input.type = "text";
+        input.placeholder = "Add a tool category that isn't listed…";
+        const btn = el("button", "btn", "+ Add category");
+        const add = () => {
+          const v = input.value.trim();
+          if (!v) return;
+          const all = role.stackCategories.concat(rs.custom.stack || []);
+          if (all.some(c => c.label.toLowerCase() === v.toLowerCase())) { input.value = ""; return; }
+          rs.custom.stack.push({ id: slugId(v), label: v });
+          saveState();
+          render();
+        };
+        btn.addEventListener("click", add);
+        input.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+        row.appendChild(input);
+        row.appendChild(btn);
+        box.appendChild(row);
+        if ((rs.custom.stack || []).length) {
+          const rmRow = el("div", "custom-remove-row");
+          rs.custom.stack.forEach(c => {
+            const rm = el("button", "chip-remove", "× " + esc(c.label));
+            rm.title = "Remove this category";
+            rm.addEventListener("click", () => {
+              rs.custom.stack = rs.custom.stack.filter(x => x.id !== c.id);
+              delete rs.stack[c.id];
+              saveState();
+              render();
+            });
+            rmRow.appendChild(rm);
+          });
+          box.appendChild(rmRow);
+        }
+        /* place the add-category control with the stack fields, before the AI questions */
+        const aiWrap = container.querySelector('[data-qid="ai_usage"]');
+        if (aiWrap) container.insertBefore(box, aiWrap);
+        else container.appendChild(box);
+      }
     };
   }
   if (key === "success") {
@@ -179,6 +252,7 @@ function renderQuestions(container, questions, answers, scopeId, onChange) {
 
   questions.forEach(q => {
     const wrap = el("div", "question");
+    wrap.dataset.qid = q.id;
     wrappers[q.id] = wrap;
     wrap.appendChild(el("label", "q-label", esc(q.label)));
     if (q.help) wrap.appendChild(el("p", "q-help", esc(q.help)));
@@ -228,23 +302,55 @@ function renderQuestions(container, questions, answers, scopeId, onChange) {
       });
       wrap.appendChild(group);
     } else if (q.type === "chips") {
+      /* Chip groups accept custom entries: values in the answer array that
+         aren't suggested options render as removable custom chips, and a
+         "+ Other…" inline input adds new ones. */
       const group = el("div", "chip-group");
       if (!Array.isArray(answers[q.id])) answers[q.id] = [];
-      q.options.forEach(o => {
-        const lab = el("label", "chip");
-        const input = el("input");
-        input.type = "checkbox";
-        input.checked = answers[q.id].includes(o);
-        input.addEventListener("change", () => {
-          const cur = answers[q.id] || (answers[q.id] = []);
-          if (input.checked) { if (!cur.includes(o)) cur.push(o); }
-          else answers[q.id] = cur.filter(x => x !== o);
-          changed();
+
+      const buildChips = (focusAdder) => {
+        group.innerHTML = "";
+        const custom = (answers[q.id] || []).filter(v => !q.options.includes(v));
+        q.options.concat(custom).forEach(o => {
+          const isCustom = !q.options.includes(o);
+          const lab = el("label", "chip" + (isCustom ? " custom" : ""));
+          const input = el("input");
+          input.type = "checkbox";
+          input.checked = (answers[q.id] || []).includes(o);
+          input.addEventListener("change", () => {
+            const cur = answers[q.id] || (answers[q.id] = []);
+            if (input.checked) { if (!cur.includes(o)) cur.push(o); }
+            else answers[q.id] = cur.filter(x => x !== o);
+            changed();
+            if (isCustom && !input.checked) buildChips(false); // unchecked custom chip disappears
+          });
+          lab.appendChild(input);
+          lab.appendChild(el("span", null, esc(o)));
+          group.appendChild(lab);
         });
-        lab.appendChild(input);
-        lab.appendChild(el("span", null, esc(o)));
-        group.appendChild(lab);
-      });
+
+        const addLab = el("label", "chip chip-add");
+        const addInput = el("input");
+        addInput.type = "text";
+        addInput.placeholder = "+ Other…";
+        const commit = (refocus) => {
+          const v = addInput.value.trim();
+          if (!v) return;
+          const cur = answers[q.id] || (answers[q.id] = []);
+          if (!cur.includes(v)) cur.push(v);
+          changed();
+          buildChips(refocus);
+        };
+        addInput.addEventListener("keydown", e => {
+          if (e.key === "Enter") { e.preventDefault(); commit(true); }
+        });
+        addInput.addEventListener("blur", () => commit(false));
+        addLab.appendChild(addInput);
+        group.appendChild(addLab);
+        if (focusAdder) addInput.focus();
+      };
+
+      buildChips(false);
       wrap.appendChild(group);
     }
 
@@ -282,6 +388,7 @@ function renderConfigLike(main, def) {
 
   const refresh = () => renderTips(tipsContainer, def.tips, def.answers);
   renderQuestions(qContainer, def.questions, def.answers, def.title, refresh);
+  if (def.extra) def.extra(qContainer);
   refresh();
 }
 
@@ -346,7 +453,7 @@ function renderAllocatorStep(main) {
   main.appendChild(el("p", "subtitle", role.timePrompt));
   main.appendChild(el("div", "coach", "🎯 " + esc(role.blurb)));
 
-  const areas = role.focusAreas;
+  const areas = roleFocusAreas();
   const table = el("div", "allocator");
   const head = el("div", "alloc-row alloc-head");
   head.appendChild(el("div", "alloc-name", "Function"));
@@ -358,7 +465,20 @@ function renderAllocatorStep(main) {
   areas.forEach(area => {
     const a = rs.areas[area.id];
     const row = el("div", "alloc-row");
-    row.appendChild(el("div", "alloc-name", area.icon + " " + esc(area.label)));
+    const nameCell = el("div", "alloc-name", area.icon + " " + esc(area.label));
+    if (area.custom) {
+      const rm = el("button", "alloc-remove", "×");
+      rm.title = "Remove this focus area";
+      rm.addEventListener("click", () => {
+        rs.custom.areas = rs.custom.areas.filter(c => c.id !== area.id);
+        delete rs.areas[area.id];
+        delete rs.deepDives[area.id];
+        saveState();
+        render();
+      });
+      nameCell.appendChild(rm);
+    }
+    row.appendChild(nameCell);
 
     const prio = el("div", "alloc-priority seg-group compact");
     [["must", "Must have"], ["nice", "Nice to have"], ["skip", "—"]].forEach(([valKey, labelTxt]) => {
@@ -393,6 +513,30 @@ function renderAllocatorStep(main) {
     table.appendChild(row);
   });
   main.appendChild(table);
+
+  /* Add a focus area the client needs that isn't suggested */
+  const addBox = el("div", "custom-add");
+  const addRow = el("div", "custom-add-row");
+  const addInput = el("input");
+  addInput.type = "text";
+  addInput.placeholder = "Add a focus area that isn't listed…";
+  const addBtn = el("button", "btn", "+ Add");
+  const addArea = () => {
+    const v = addInput.value.trim();
+    if (!v) return;
+    const exists = roleFocusAreas().some(a => a.label.toLowerCase() === v.toLowerCase());
+    if (exists) { addInput.value = ""; return; }
+    rs.custom.areas.push({ id: slugId(v), label: v });
+    ensureRole(state.roleId);
+    saveState();
+    render();
+  };
+  addBtn.addEventListener("click", addArea);
+  addInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addArea(); } });
+  addRow.appendChild(addInput);
+  addRow.appendChild(addBtn);
+  addBox.appendChild(addRow);
+  main.appendChild(addBox);
 
   const totalBar = el("div", "total-bar");
   const totalFill = el("div", "total-fill");
@@ -440,7 +584,7 @@ function computeProfile() {
   const role = activeRole();
   if (!role) return null;
   const rs = roleState();
-  const musts = role.focusAreas.filter(a => rs.areas[a.id].priority === "must").map(a => a.id);
+  const musts = roleFocusAreas().filter(a => rs.areas[a.id].priority === "must").map(a => a.id);
   if (musts.length === 0) return null;
   if (musts.length >= 5) {
     return { profile: "Unicorn alert 🦄",
@@ -449,7 +593,7 @@ function computeProfile() {
   for (const rule of role.profileRules) {
     if (rule.must.every(id => musts.includes(id))) return rule;
   }
-  const labels = musts.map(id => role.focusAreas.find(a => a.id === id).label);
+  const labels = musts.map(id => roleFocusAreas().find(a => a.id === id).label);
   return { profile: "Custom profile: " + labels.join(" + "),
     detail: "Recruit around demonstrated results in " + labels.join(", ") + ". Ask candidates how their week actually breaks down and match it to the client's percentages." };
 }
@@ -473,8 +617,8 @@ function renderDeepDivesStep(main) {
 
   main.appendChild(el("h2", null, "Deep Dives"));
   const rs = roleState();
-  const musts = role.focusAreas.filter(a => rs.areas[a.id].priority === "must");
-  const nices = role.focusAreas.filter(a => rs.areas[a.id].priority === "nice");
+  const musts = roleFocusAreas().filter(a => rs.areas[a.id].priority === "must");
+  const nices = roleFocusAreas().filter(a => rs.areas[a.id].priority === "nice");
 
   if (!musts.length && !nices.length) {
     main.appendChild(el("p", "subtitle", "No focus areas selected yet — go back one step and mark the must-haves. The relevant deep-dive questions will appear here automatically."));
@@ -562,7 +706,7 @@ function collectSummary() {
   /* Focus areas */
   if (role) {
     const rs = roleState();
-    const active = role.focusAreas.filter(a => rs.areas[a.id].priority !== "skip")
+    const active = roleFocusAreas().filter(a => rs.areas[a.id].priority !== "skip")
       .sort((a, b) => (rs.areas[b.id].pct || 0) - (rs.areas[a.id].pct || 0));
     if (active.length) {
       const lines = active.map(a => ({
@@ -574,7 +718,7 @@ function collectSummary() {
       sections.push({ title: "Focus Areas & % of Time", lines });
     }
     /* Deep dives */
-    role.focusAreas.forEach(area => {
+    roleFocusAreas().forEach(area => {
       const prio = rs.areas[area.id].priority;
       if (prio === "skip") return;
       const answers = rs.deepDives[area.id];
@@ -665,8 +809,8 @@ function renderReviewStep(main) {
   const role = activeRole();
   const b = state.common.basics, lg = state.common.logistics;
   const rs = role ? roleState() : null;
-  const musts = role ? role.focusAreas.filter(a => rs.areas[a.id].priority === "must") : [];
-  const total = role ? role.focusAreas.reduce((s, a) => s + (rs.areas[a.id].pct || 0), 0) : 0;
+  const musts = role ? roleFocusAreas().filter(a => rs.areas[a.id].priority === "must") : [];
+  const total = role ? roleFocusAreas().reduce((s, a) => s + (rs.areas[a.id].pct || 0), 0) : 0;
 
   const checks = [
     { ok: !!role, text: "Role selected" },
@@ -747,8 +891,8 @@ function stepDone(w) {
     if (!def) return false;
     return def.questions.some(q => truthy(def.answers[q.id]));
   }
-  if (w.kind === "allocator") return !!activeRole() && activeRole().focusAreas.some(a => roleState().areas[a.id].priority !== "skip");
-  if (w.kind === "deepdives") return !!activeRole() && activeRole().focusAreas.some(a =>
+  if (w.kind === "allocator") return !!activeRole() && roleFocusAreas().some(a => roleState().areas[a.id].priority !== "skip");
+  if (w.kind === "deepdives") return !!activeRole() && roleFocusAreas().some(a =>
     roleState().areas[a.id].priority !== "skip" &&
     Object.keys(roleState().deepDives[a.id]).some(k => truthy(roleState().deepDives[a.id][k])));
   return false;
