@@ -17,7 +17,8 @@ function defaultState() {
   return {
     roleId: null,
     common: { basics: {}, logistics: {}, team: {}, closing: {} },
-    roles: {}
+    roles: {},
+    notes: { pretext: "", live: "" }
   };
 }
 
@@ -32,6 +33,7 @@ function loadState() {
       base.roleId = saved.roleId || null;
       base.common = Object.assign(base.common, saved.common || {});
       base.roles = saved.roles || {};
+      base.notes = Object.assign(base.notes, saved.notes || {});
       return base;
     }
   } catch (e) { /* corrupted — start fresh */ }
@@ -582,6 +584,13 @@ function collectSummary() {
   }
 
   const closing = collectConfigSection(configStepDef("closing")); if (closing) sections.push(closing);
+
+  /* Persistent notes → free-text sections at the end of the output */
+  if ((state.notes.live || "").trim())
+    sections.push({ title: "Live Notes", text: state.notes.live.trim() });
+  if ((state.notes.pretext || "").trim())
+    sections.push({ title: "Job Description / Pre-Meeting Info", text: state.notes.pretext.trim() });
+
   return sections;
 }
 
@@ -608,7 +617,9 @@ function printSummary() {
   const sections = collectSummary();
   let rows = "";
   sections.forEach(sec => {
-    rows += "<h2>" + esc(sec.title) + "</h2><dl>";
+    rows += "<h2>" + esc(sec.title) + "</h2>";
+    if (sec.text) { rows += "<p class='note'>" + esc(sec.text).replace(/\n/g, "<br>") + "</p>"; return; }
+    rows += "<dl>";
     sec.lines.forEach(l => { rows += "<dt>" + esc(l.label) + "</dt><dd>" + esc(l.value).replace(/\n/g, "<br>") + "</dd>"; });
     rows += "</dl>";
   });
@@ -621,6 +632,7 @@ function printSummary() {
     "h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:#2456d6;border-bottom:1px solid #e2e7f0;padding-bottom:5px;margin:22px 0 8px}" +
     "dl{margin:0;display:grid;grid-template-columns:240px 1fr;gap:5px 16px}" +
     "dt{font-weight:600;color:#5b6577;font-size:13.5px}dd{margin:0;font-size:13.5px}" +
+    "p.note{white-space:pre-wrap;font-size:13.5px;margin:0}" +
     "@page{margin:18mm}</style></head><body>" +
     "<h1>" + esc(title) + "</h1><p class='date'>Intake completed " + esc(new Date().toLocaleDateString()) + "</p>" +
     rows + "</body></html>";
@@ -700,6 +712,7 @@ function renderReviewStep(main) {
   if (!sections.length) summary.appendChild(el("p", "q-help", "Nothing captured yet — work through the steps and the summary will build itself here."));
   sections.forEach(sec => {
     summary.appendChild(el("h4", null, esc(sec.title)));
+    if (sec.text) { summary.appendChild(el("div", "summary-note", esc(sec.text))); return; }
     const dl = el("dl");
     sec.lines.forEach(l => { dl.appendChild(el("dt", null, esc(l.label))); dl.appendChild(el("dd", null, esc(l.value))); });
     summary.appendChild(dl);
@@ -711,6 +724,7 @@ function summaryMarkdown() {
   let md = "# Job Order: " + jobTitleLine() + "\n\n_Intake completed " + new Date().toLocaleDateString() + "_\n";
   collectSummary().forEach(sec => {
     md += "\n## " + sec.title + "\n\n";
+    if (sec.text) { md += sec.text + "\n"; return; }
     sec.lines.forEach(l => { md += "- **" + l.label + ":** " + l.value + "\n"; });
   });
   return md;
@@ -782,6 +796,37 @@ function render() {
   }
   main.appendChild(nav);
   app.appendChild(main);
+
+  renderNotesPanel(app);
+}
+
+/* Persistent notes rail — visible on every step, saved to state, and rolled
+   into the final output. Editing it does NOT re-render (so typing never loses
+   focus); it just updates state and autosaves. */
+function renderNotesPanel(app) {
+  const panel = el("aside", "notes-panel");
+  panel.appendChild(el("div", "notes-head", "🗒️ Notes"));
+  panel.appendChild(el("p", "notes-sub", "Kept across every step and added to the exported job order."));
+
+  const preBlock = el("div", "notes-block");
+  preBlock.appendChild(el("label", "notes-label", "Job description / pre-meeting info"));
+  const pre = el("textarea", "notes-pretext");
+  pre.placeholder = "Paste the job description or anything the client shared before the call…";
+  pre.value = state.notes.pretext || "";
+  pre.addEventListener("input", () => { state.notes.pretext = pre.value; saveState(); });
+  preBlock.appendChild(pre);
+  panel.appendChild(preBlock);
+
+  const liveBlock = el("div", "notes-block grow");
+  liveBlock.appendChild(el("label", "notes-label", "Live notes"));
+  const live = el("textarea", "notes-live");
+  live.placeholder = "Jot anything they mention that isn't a field on this screen…";
+  live.value = state.notes.live || "";
+  live.addEventListener("input", () => { state.notes.live = live.value; saveState(); });
+  liveBlock.appendChild(live);
+  panel.appendChild(liveBlock);
+
+  app.appendChild(panel);
 }
 
 document.addEventListener("DOMContentLoaded", render);

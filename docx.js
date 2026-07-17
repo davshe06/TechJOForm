@@ -163,7 +163,14 @@ function buildJobOrderDocx(title, dateStr, sections) {
   }
   sections.forEach(sec => {
     body += docxHeading(sec.title, "Heading1");
-    sec.lines.forEach(l => { body += docxLabelValue(l.label, l.value); });
+    if (sec.text) {
+      /* free-text section (notes / pasted JD): blank lines split paragraphs */
+      String(sec.text).split(/\n{2,}/).forEach(para => {
+        body += "<w:p><w:r>" + docxRunContent(para) + "</w:r></w:p>";
+      });
+      return;
+    }
+    (sec.lines || []).forEach(l => { body += docxLabelValue(l.label, l.value); });
   });
 
   const documentXml =
