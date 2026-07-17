@@ -18,7 +18,7 @@ function defaultState() {
     roleId: null,
     common: { basics: {}, logistics: {}, team: {}, closing: {} },
     roles: {},
-    notes: { pretext: "", live: "" }
+    notes: { pretext: "", live: "", pretextH: null, liveH: null }
   };
 }
 
@@ -43,10 +43,18 @@ function loadState() {
 let saveTimer = null;
 function saveState() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
-  }, 200);
+  saveTimer = setTimeout(flushSave, 200);
 }
+function flushSave() {
+  clearTimeout(saveTimer);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+/* Flush any pending debounced save before the page goes away, so a quick
+   reload or tab close never drops the last edit. */
+window.addEventListener("pagehide", flushSave);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") flushSave();
+});
 
 /* ---------- role helpers ---------- */
 
@@ -807,26 +815,39 @@ function renderNotesPanel(app) {
   const panel = el("aside", "notes-panel");
   panel.appendChild(el("div", "notes-head", "🗒️ Notes"));
   panel.appendChild(el("p", "notes-sub", "Kept across every step and added to the exported job order."));
-
-  const preBlock = el("div", "notes-block");
-  preBlock.appendChild(el("label", "notes-label", "Job description / pre-meeting info"));
-  const pre = el("textarea", "notes-pretext");
-  pre.placeholder = "Paste the job description or anything the client shared before the call…";
-  pre.value = state.notes.pretext || "";
-  pre.addEventListener("input", () => { state.notes.pretext = pre.value; saveState(); });
-  preBlock.appendChild(pre);
-  panel.appendChild(preBlock);
-
-  const liveBlock = el("div", "notes-block grow");
-  liveBlock.appendChild(el("label", "notes-label", "Live notes"));
-  const live = el("textarea", "notes-live");
-  live.placeholder = "Jot anything they mention that isn't a field on this screen…";
-  live.value = state.notes.live || "";
-  live.addEventListener("input", () => { state.notes.live = live.value; saveState(); });
-  liveBlock.appendChild(live);
-  panel.appendChild(liveBlock);
-
+  panel.appendChild(notesField("Job description / pre-meeting info", "pretext",
+    "Paste the job description or anything the client shared before the call…"));
+  panel.appendChild(notesField("Live notes", "live",
+    "Jot anything they mention that isn't a field on this screen…"));
   app.appendChild(panel);
+}
+
+/* One notes field. Text autosaves; a manual resize is captured via
+   ResizeObserver and stored (…H), then reapplied so the chosen height
+   survives step changes. Width-only changes don't trigger a save. */
+function notesField(labelText, key, placeholder) {
+  const hKey = key + "H";
+  const block = el("div", "notes-block");
+  block.appendChild(el("label", "notes-label", labelText));
+  const ta = el("textarea");
+  ta.placeholder = placeholder;
+  ta.value = state.notes[key] || "";
+  if (state.notes[hKey]) ta.style.height = state.notes[hKey] + "px";
+  ta.addEventListener("input", () => { state.notes[key] = ta.value; saveState(); });
+
+  if (typeof ResizeObserver !== "undefined") {
+    let lastH = null;
+    const ro = new ResizeObserver(() => {
+      const h = ta.offsetHeight;
+      if (!h) return;
+      if (lastH === null) { lastH = h; return; }   // first measurement = baseline
+      if (h !== lastH) { lastH = h; state.notes[hKey] = h; saveState(); }
+    });
+    ro.observe(ta);
+  }
+
+  block.appendChild(ta);
+  return block;
 }
 
 document.addEventListener("DOMContentLoaded", render);
