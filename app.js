@@ -56,6 +56,38 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") flushSave();
 });
 
+/* ---------- theme ----------
+   "auto" follows the system preference via the prefers-color-scheme media
+   query; "light"/"dark" pin it by stamping data-theme on <html>. Stored under
+   its own key — a UI preference, so "Start new job order" leaves it alone. */
+
+const THEME_KEY = "digital-jo-theme";
+
+function themePref() {
+  try {
+    const t = localStorage.getItem(THEME_KEY);
+    return t === "light" || t === "dark" ? t : "auto";
+  } catch (e) { return "auto"; }
+}
+
+function applyTheme(pref) {
+  if (pref === "light" || pref === "dark") {
+    document.documentElement.dataset.theme = pref;
+  } else {
+    delete document.documentElement.dataset.theme;
+  }
+}
+
+function setThemePref(pref) {
+  try {
+    if (pref === "auto") localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, pref);
+  } catch (e) {}
+  applyTheme(pref);
+}
+
+applyTheme(themePref());
+
 /* ---------- role helpers ---------- */
 
 function activeRole() { return state.roleId ? ROLES[state.roleId] : null; }
@@ -915,6 +947,19 @@ function render() {
     btn.addEventListener("click", () => { currentStep = i; render(); });
     side.appendChild(btn);
   });
+  /* theme toggle: Auto follows system preference; Light/Dark pin it */
+  const themeBox = el("div", "theme-toggle");
+  [["auto", "◐ Auto"], ["light", "☀️ Light"], ["dark", "🌙 Dark"]].forEach(([val, labelTxt]) => {
+    const btn = el("button", "theme-btn" + (themePref() === val ? " active" : ""), labelTxt);
+    btn.addEventListener("click", () => {
+      setThemePref(val);
+      themeBox.querySelectorAll(".theme-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+    themeBox.appendChild(btn);
+  });
+  side.appendChild(themeBox);
+
   const reset = el("button", "nav-reset", "🗑 Start new job order");
   let armed = false, armTimer = null;
   reset.addEventListener("click", () => {
