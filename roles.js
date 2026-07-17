@@ -917,16 +917,592 @@ const ROLES = {
               "Adoption / usage", "Deployment velocity", "Retrieval precision"],
     backgrounds: ["AI / ML startup", "Product company", "B2B SaaS", "Enterprise", "Research lab",
                   "Fintech", "Consulting / SI"]
+  },
+
+  /* ------------------------------------------------ FULL-STACK DEVELOPER */
+  fullstack_developer: {
+    label: "Full-Stack Developer",
+    icon: "🧩",
+    tagline: "Front-end, back-end, and everything between",
+    blurb: "'Full-stack' always has a center of gravity — few are equally deep on both ends. Find where they actually spend their time and which end matters most for this team.",
+    timePrompt: "“What three things carry most of this developer's week across front-end, back-end, data, and infra — and roughly what percentage each?”",
+    focusAreas: [
+      { id: "frontend", label: "Front-End", icon: "🖌️", deepDive: {
+        intro: "Front-end framework is a hard filter even for full-stack.",
+        questions: [
+          { id: "framework", type: "chips", label: "Front-end framework?",
+            options: ["React", "Vue", "Angular", "Next.js", "Svelte"] },
+          { id: "ts", type: "radio", label: "TypeScript?", options: ["Required", "Preferred", "Not used"] }
+        ], tips: [] } },
+      { id: "backend", label: "Back-End", icon: "🖥️", deepDive: {
+        intro: "Back-end language/framework is the other hard filter.",
+        questions: [
+          { id: "language", type: "chips", label: "Back-end language?",
+            options: ["Node / TypeScript", "Python", "Java", "C# / .NET", "Go", "Ruby", "PHP"] },
+          { id: "framework", type: "text", label: "Framework?", placeholder: "Express, Django, Spring, .NET, Rails" }
+        ], tips: [] } },
+      { id: "balance", label: "Front/Back Balance", icon: "⚖️", deepDive: {
+        intro: "The center of gravity determines who you target.",
+        questions: [
+          { id: "split", type: "radio", label: "Where's the center of gravity?",
+            options: ["Front-end-leaning", "Balanced", "Back-end-leaning"] }
+        ],
+        tips: [
+          { when: a => a.split === "Balanced",
+            text: "Truly balanced full-stack is the rarest and priciest — most 'full-stack' engineers lean one way. Confirm the client will accept a lean." }
+        ] } },
+      { id: "databases", label: "Databases & Data", icon: "🗄️", deepDive: {
+        intro: "Data-layer depth varies widely in full-stack roles.",
+        questions: [
+          { id: "db", type: "text", label: "Databases?", placeholder: "PostgreSQL, MySQL, MongoDB, Redis" }
+        ], tips: [] } },
+      { id: "cloud_devops", label: "Cloud & DevOps", icon: "☁️", deepDive: {
+        intro: "How much infra ownership the role carries.",
+        questions: [
+          { id: "scope", type: "chips", label: "Cloud / DevOps scope?",
+            options: ["Deploys own apps", "Cloud (AWS/Azure/GCP)", "Docker / K8s", "CI/CD", "IaC"] }
+        ], tips: [] } },
+      { id: "ai", label: "AI / GenAI", icon: "🧠", deepDive: {
+        intro: "Full-stack engineers are often the ones wiring LLM features end-to-end.",
+        questions: [
+          { id: "usage", type: "chips", label: "How does AI factor into this role?",
+            options: ["Building AI/LLM app features", "Integrating AI APIs", "RAG / vector search", "AI-assisted coding", "Not a factor"] },
+          { id: "depth", type: "radio", label: "Depth of AI work?",
+            options: ["Core part of the role", "Occasional / augmenting", "Just AI-assisted tooling"] },
+          { id: "tools", type: "text", label: "Specific AI tools / skills?", placeholder: "OpenAI/Anthropic APIs, LangChain, Vercel AI SDK, pgvector…" }
+        ],
+        tips: [
+          { when: a => (a.usage || []).includes("Building AI/LLM app features"),
+            text: "If shipping AI features is core, that edges toward the AI Engineer profile — confirm the depth of AI vs. general full-stack work." }
+        ] } }
+    ],
+    specialists: [
+      { label: "Front-End Developer", overlapsArea: "frontend" },
+      { label: "Back-End Developer", overlapsArea: "backend" },
+      { label: "DevOps / SRE", overlapsArea: "cloud_devops" },
+      { label: "UI / UX Designer", overlapsArea: null },
+      { label: "QA Engineer", overlapsArea: null },
+      { label: "Product Manager", overlapsArea: null }
+    ],
+    profileRules: [
+      { must: ["frontend", "backend"], profile: "True full-stack engineer",
+        detail: "Target full-stack titles comfortable on both ends. Shipped end-to-end features are the filter." },
+      { must: ["backend", "databases"], profile: "Back-end-leaning full-stack",
+        detail: "Target back-end engineers who also do front-end. Services and data depth are the filters." },
+      { must: ["frontend", "cloud_devops"], profile: "Front-end / product engineer",
+        detail: "Target product engineers who own UI plus deployment. Front-end depth and shipping autonomy are the filters." }
+    ],
+    stackCategories: [
+      { id: "frontend", label: "Front-end", placeholder: "React, TypeScript, Tailwind…" },
+      { id: "backend", label: "Back-end languages", placeholder: "Node, Python, Java, .NET…" },
+      { id: "db", label: "Databases", placeholder: "PostgreSQL, MongoDB, Redis…" },
+      { id: "cloud", label: "Cloud / DevOps", placeholder: "AWS, Docker, GitHub Actions…" },
+      { id: "testing", label: "Testing", placeholder: "Jest, Playwright, Cypress…" },
+      { id: "build", label: "Build tools", placeholder: "Vite, Webpack, Turborepo…" }
+    ],
+    aiUseCases: ["Code generation", "Code review", "Test generation", "Documentation", "Debugging"],
+    metrics: ["Feature velocity", "Uptime", "Defect rate", "Core Web Vitals", "Test coverage", "Deployment frequency"],
+    backgrounds: BG_COMMON.concat(["E-commerce", "Healthcare", "Agency"])
+  },
+
+  /* --------------------------------------------------- MOBILE DEVELOPER */
+  mobile_developer: {
+    label: "Mobile Developer",
+    icon: "📱",
+    tagline: "Native, cross-platform, and app delivery",
+    blurb: "Mobile splits sharply by platform — iOS, Android, or cross-platform — and those pools barely overlap. Pin the platform and whether it's native or cross-platform first.",
+    timePrompt: "“Where will this developer spend most of the week — platform code, UI, integration, performance? Roughly what percentage each?”",
+    focusAreas: [
+      { id: "native", label: "Native Platform", icon: "📲", deepDive: {
+        intro: "Native platform + language is the single hardest filter.",
+        questions: [
+          { id: "platform", type: "chips", label: "Which platform(s)?",
+            options: ["iOS (Swift)", "iOS (Objective-C)", "Android (Kotlin)", "Android (Java)"] },
+          { id: "years", type: "select", label: "Years on that platform?", options: ["1–2", "3–5", "6–8", "9+"] }
+        ],
+        tips: [
+          { when: a => (a.platform || []).some(p => p.indexOf("iOS") === 0) && (a.platform || []).some(p => p.indexOf("Android") === 0),
+            text: "Wanting deep native iOS AND Android in one person is rare — most engineers specialize. Consider cross-platform or two hires." }
+        ] } },
+      { id: "cross", label: "Cross-Platform", icon: "🔀", deepDive: {
+        intro: "Cross-platform is a different toolchain and mindset than native.",
+        questions: [
+          { id: "framework", type: "radio", label: "Framework?",
+            options: ["React Native", "Flutter", "Kotlin Multiplatform", "MAUI / Xamarin", "None (native only)"] }
+        ],
+        tips: [
+          { when: a => a.framework === "Flutter",
+            text: "Flutter (Dart) is a distinct pool from React Native — don't assume they cross-apply." }
+        ] } },
+      { id: "ui", label: "UI / UX Implementation", icon: "🎨", deepDive: {
+        intro: "Fidelity to design and modern UI toolkits matter.",
+        questions: [
+          { id: "toolkits", type: "chips", label: "UI toolkits?",
+            options: ["SwiftUI", "UIKit", "Jetpack Compose", "XML layouts"] }
+        ], tips: [] } },
+      { id: "api", label: "API & Data", icon: "🔌", deepDive: {
+        intro: "Integration and local data handling shape the day-to-day.",
+        questions: [
+          { id: "scope", type: "chips", label: "Integration scope?",
+            options: ["REST", "GraphQL", "Offline / local storage", "Push notifications", "Real-time / sockets"] }
+        ], tips: [] } },
+      { id: "quality", label: "Performance & Release", icon: "🚀", deepDive: {
+        intro: "Store release management and performance separate seniors.",
+        questions: [
+          { id: "scope", type: "chips", label: "What's expected?",
+            options: ["App performance / profiling", "CI/CD (Fastlane etc.)", "App Store / Play submission", "Crash monitoring", "Automated testing"] }
+        ], tips: [] } },
+      { id: "ai", label: "AI / GenAI", icon: "🧠", deepDive: {
+        intro: "AI reaches mobile via on-device ML, AI-assisted coding, and in-app AI features.",
+        questions: [
+          { id: "usage", type: "chips", label: "How does AI factor into this role?",
+            options: ["On-device ML (Core ML / ML Kit)", "Building AI/LLM app features", "AI-assisted coding", "Not a factor"] },
+          { id: "depth", type: "radio", label: "Depth of AI work?",
+            options: ["Core part of the role", "Occasional / augmenting", "Just AI-assisted tooling"] },
+          { id: "tools", type: "text", label: "Specific AI tools / skills?", placeholder: "Core ML, ML Kit, on-device LLMs, OpenAI APIs…" }
+        ],
+        tips: [
+          { when: a => (a.usage || []).includes("On-device ML (Core ML / ML Kit)"),
+            text: "On-device ML is a specialized mobile skill — screen for shipped Core ML / ML Kit work if it's core." }
+        ] } }
+    ],
+    specialists: [
+      { label: "iOS Developer", overlapsArea: "native" },
+      { label: "Android Developer", overlapsArea: "native" },
+      { label: "Back-End Developer", overlapsArea: "api" },
+      { label: "UI / UX Designer", overlapsArea: "ui" },
+      { label: "QA Engineer", overlapsArea: "quality" },
+      { label: "DevOps Engineer", overlapsArea: null }
+    ],
+    profileRules: [
+      { must: ["native", "ui"], profile: "Native mobile engineer",
+        detail: "Target native iOS/Android engineers. Platform depth and shipped apps are the filters." },
+      { must: ["cross", "api"], profile: "Cross-platform mobile engineer",
+        detail: "Target React Native / Flutter engineers. Cross-platform apps in production are the filter." },
+      { must: ["native", "quality"], profile: "Senior mobile engineer",
+        detail: "Target senior mobile engineers who own performance and release. Store track record is the filter." }
+    ],
+    stackCategories: [
+      { id: "lang", label: "Languages / frameworks", placeholder: "Swift, Kotlin, React Native, Flutter…" },
+      { id: "cross", label: "Cross-platform", placeholder: "React Native, Flutter…" },
+      { id: "backend", label: "Backend / API", placeholder: "REST, GraphQL, Firebase…" },
+      { id: "cicd", label: "CI/CD (mobile)", placeholder: "Fastlane, Bitrise, App Center…" },
+      { id: "testing", label: "Testing", placeholder: "XCTest, Espresso, Appium…" },
+      { id: "analytics", label: "Analytics / crash", placeholder: "Firebase, Crashlytics, Sentry…" }
+    ],
+    aiUseCases: ["Code generation", "Test generation", "Documentation", "Crash analysis"],
+    metrics: ["App store rating", "Crash-free rate", "App performance / load time", "Release cadence", "Adoption / retention"],
+    backgrounds: BG_COMMON.concat(["Consumer apps", "E-commerce", "Fintech", "Healthcare", "Gaming"])
+  },
+
+  /* ---------------------------------------------------- CLOUD ARCHITECT */
+  cloud_architect: {
+    label: "Cloud Architect",
+    icon: "☁️",
+    tagline: "Cloud platform, solutions, migration, and cost",
+    blurb: "A Cloud Architect designs the target state and the path to it. Cloud-platform depth and whether the role is design-only vs. hands-on are the key filters — plus certifications, which the market takes seriously here.",
+    timePrompt: "“Between platform architecture, solutioning, migration, security, and cost — what three things carry most of the week, and roughly what percentage each?”",
+    focusAreas: [
+      { id: "platform_arch", label: "Cloud Platform Architecture", icon: "🏛️", deepDive: {
+        intro: "Cloud depth and certifications are the hardest filters.",
+        questions: [
+          { id: "cloud", type: "chips", label: "Primary cloud?", options: ["AWS", "Azure", "GCP", "Multi-cloud", "Hybrid / on-prem"] },
+          { id: "certs", type: "radio", label: "Certification expectation?",
+            options: ["Required (Pro / Architect-level)", "Preferred", "Not important"] },
+          { id: "handson", type: "radio", label: "Hands-on or design-only?",
+            options: ["Hands-on architect", "Design + oversight", "Design-only / advisory"] }
+        ],
+        tips: [
+          { when: a => (a.cloud || []).length >= 3,
+            text: "True architect-level depth across 3+ clouds is very rare — confirm which cloud is primary; the rest are usually 'nice to have'." }
+        ] } },
+      { id: "solution_arch", label: "Solution / App Architecture", icon: "🏗️", deepDive: {
+        intro: "Application-architecture depth tells you how close to engineering the role sits.",
+        questions: [
+          { id: "scope", type: "chips", label: "Architecture scope?",
+            options: ["Microservices / distributed", "Serverless", "Event-driven", "Data / analytics platforms", "Well-Architected reviews"] }
+        ], tips: [] } },
+      { id: "migration", label: "Migration & Modernization", icon: "🚚", deepDive: {
+        intro: "Migration vs. greenfield vs. modernization are different profiles.",
+        questions: [
+          { id: "type", type: "chips", label: "What kind of work?",
+            options: ["Data-center → cloud migration", "Re-platform / re-factor", "Greenfield cloud-native", "Cloud-to-cloud"] }
+        ],
+        tips: [
+          { when: a => (a.type || []).includes("Data-center → cloud migration"),
+            text: "Large migration programs want someone who's led that exact journey — make prior migration leadership a screening filter." }
+        ] } },
+      { id: "security_gov", label: "Security & Governance", icon: "🛡️", deepDive: {
+        intro: "Cloud security/governance ownership adds compliance weight.",
+        questions: [
+          { id: "scope", type: "chips", label: "Scope?",
+            options: ["IAM / landing zones", "Compliance (SOC2/HIPAA/etc.)", "Network security", "Policy / guardrails"] }
+        ], tips: [] } },
+      { id: "finops", label: "Cost & FinOps", icon: "💰", deepDive: {
+        intro: "Cost optimization is increasingly a core architect mandate.",
+        questions: [
+          { id: "scope", type: "chips", label: "FinOps scope?",
+            options: ["Cost optimization", "Budgeting / forecasting", "Tagging / allocation", "FinOps practice"] }
+        ], tips: [] } },
+      { id: "ai", label: "AI / GenAI", icon: "🧠", deepDive: {
+        intro: "Architects are increasingly asked to design AI/ML and GenAI platforms on cloud.",
+        questions: [
+          { id: "usage", type: "chips", label: "How does AI factor into this role?",
+            options: ["Architecting AI/ML platforms", "GenAI / LLM infrastructure", "AI landing zones / governance", "AI-assisted architecture", "Not a factor"] },
+          { id: "depth", type: "radio", label: "Depth of AI work?",
+            options: ["Core part of the role", "Occasional / augmenting", "Just AI-assisted tooling"] },
+          { id: "tools", type: "text", label: "Specific AI platforms / skills?", placeholder: "SageMaker, Vertex, Bedrock, Azure OpenAI…" }
+        ],
+        tips: [
+          { when: a => (a.usage || []).includes("GenAI / LLM infrastructure"),
+            text: "Designing GenAI/LLM infrastructure is a new, in-demand architecture skill — screen for real deployments, not slideware." }
+        ] } }
+    ],
+    specialists: [
+      { label: "DevOps / SRE", overlapsArea: null },
+      { label: "Cloud Engineer", overlapsArea: "platform_arch" },
+      { label: "Security Engineer", overlapsArea: "security_gov" },
+      { label: "Solutions Architect", overlapsArea: "solution_arch" },
+      { label: "Network Engineer", overlapsArea: null },
+      { label: "Back-End Developer", overlapsArea: null }
+    ],
+    profileRules: [
+      { must: ["platform_arch", "solution_arch"], profile: "Cloud solutions architect",
+        detail: "Target solutions-architect titles with the named cloud. Certs and reference architectures are the filters." },
+      { must: ["platform_arch", "migration"], profile: "Cloud migration architect",
+        detail: "Target architects who've led migrations. Prior data-center-to-cloud programs are the filter." },
+      { must: ["security_gov", "finops"], profile: "Cloud governance / FinOps architect",
+        detail: "Target architects who own security and cost. Landing zones and FinOps practice are the filters." }
+    ],
+    stackCategories: [
+      { id: "cloud", label: "Cloud platform", placeholder: "AWS, Azure, GCP…" },
+      { id: "iac", label: "IaC", placeholder: "Terraform, CloudFormation…" },
+      { id: "arch", label: "Architecture / diagramming", placeholder: "Lucidchart, draw.io, C4…" },
+      { id: "containers", label: "Containers / serverless", placeholder: "Kubernetes, Lambda…" },
+      { id: "security", label: "Security tools", placeholder: "IAM, CSPM, Wiz…" },
+      { id: "cost", label: "Cost / FinOps", placeholder: "Cost Explorer, CloudHealth…" }
+    ],
+    aiUseCases: ["Architecture assistance", "Documentation", "Cost analysis", "IaC generation"],
+    metrics: ["Cost savings", "Availability / uptime", "Migration success", "Well-Architected score", "Time-to-provision", "Security posture"],
+    backgrounds: BG_COMMON.concat(["Healthcare", "Financial Services", "Government", "MSP / consulting"])
+  },
+
+  /* -------------------------------------------------- SECURITY ENGINEER */
+  security_engineer: {
+    label: "Security Engineer",
+    icon: "🔒",
+    tagline: "AppSec, cloud, SecOps, IAM, and compliance",
+    blurb: "Security spans offensive, defensive, cloud, and governance — a pentester and a GRC analyst share a title but not a skill set. Pin the security domain first; it's most of the search.",
+    timePrompt: "“Across app security, cloud security, operations, and compliance — what three things carry most of the week, and roughly what percentage each?”",
+    focusAreas: [
+      { id: "appsec", label: "Application Security", icon: "🛡️", deepDive: {
+        intro: "AppSec ties security to the SDLC and code.",
+        questions: [
+          { id: "scope", type: "chips", label: "AppSec scope?",
+            options: ["SAST / DAST", "Secure code review", "Threat modeling", "Secure SDLC / DevSecOps", "SCA / dependencies"] },
+          { id: "coding", type: "radio", label: "Coding ability expected?",
+            options: ["Strong (can code / review)", "Some", "Minimal"] }
+        ],
+        tips: [
+          { when: a => a.coding === "Strong (can code / review)",
+            text: "Code-capable AppSec engineers are scarce and pricey — confirm the depth and target software-security backgrounds." }
+        ] } },
+      { id: "cloud_sec", label: "Cloud Security", icon: "☁️", deepDive: {
+        intro: "Cloud security is the fastest-growing security specialty.",
+        questions: [
+          { id: "cloud", type: "chips", label: "Which cloud?", options: ["AWS", "Azure", "GCP", "Multi-cloud"] },
+          { id: "scope", type: "chips", label: "Scope?",
+            options: ["CSPM / posture", "IAM / least privilege", "Container / K8s security", "Cloud IR"] }
+        ], tips: [] } },
+      { id: "secops", label: "Security Operations / IR", icon: "🚨", deepDive: {
+        intro: "SOC / detection / IR is the defensive operations half.",
+        questions: [
+          { id: "scope", type: "chips", label: "SecOps scope?",
+            options: ["SIEM / monitoring", "Threat detection / hunting", "Incident response", "SOAR / automation", "Forensics"] },
+          { id: "tools", type: "text", label: "SIEM / tools?", placeholder: "Splunk, Sentinel, CrowdStrike, Wazuh" }
+        ], tips: [] } },
+      { id: "iam", label: "IAM & Zero Trust", icon: "🔑", deepDive: {
+        intro: "Identity is increasingly the core security perimeter.",
+        questions: [
+          { id: "scope", type: "chips", label: "IAM scope?",
+            options: ["SSO / federation", "PAM", "Zero Trust", "IGA / governance", "MFA"] }
+        ], tips: [] } },
+      { id: "grc", label: "Compliance & GRC", icon: "📋", deepDive: {
+        intro: "GRC is a distinct, less hands-on-technical track.",
+        questions: [
+          { id: "frameworks", type: "chips", label: "Frameworks?",
+            options: ["SOC 2", "ISO 27001", "PCI DSS", "HIPAA", "NIST / CMMC", "FedRAMP"] }
+        ],
+        tips: [
+          { when: a => (a.frameworks || []).includes("FedRAMP") || (a.frameworks || []).includes("NIST / CMMC"),
+            text: "FedRAMP/NIST/CMMC usually means government work — clearance and citizenship requirements often apply; confirm in Logistics." }
+        ] } },
+      { id: "offensive", label: "Offensive / Pen Testing", icon: "🗡️", deepDive: {
+        intro: "Offensive security is a specialized, certification-heavy track.",
+        questions: [
+          { id: "scope", type: "chips", label: "Offensive scope?",
+            options: ["Web app pentest", "Network pentest", "Red team", "Vulnerability assessment", "Bug bounty"] },
+          { id: "certs", type: "radio", label: "Certifications?",
+            options: ["Required (OSCP / etc.)", "Preferred", "Not important"] }
+        ],
+        tips: [
+          { when: a => a.certs === "Required (OSCP / etc.)",
+            text: "OSCP/offensive certs sharply narrow the pool and raise rates — confirm it's a true must-have." }
+        ] } },
+      { id: "ai", label: "AI / GenAI", icon: "🧠", deepDive: {
+        intro: "AI shows up in security as detection tooling, security copilots, and the new job of securing AI systems.",
+        questions: [
+          { id: "usage", type: "chips", label: "How does AI factor into this role?",
+            options: ["AI-driven threat detection", "Security copilots / triage", "Securing AI/LLM systems", "AI-assisted code scanning", "Not a factor"] },
+          { id: "depth", type: "radio", label: "Depth of AI work?",
+            options: ["Core part of the role", "Occasional / augmenting", "Just AI-assisted tooling"] },
+          { id: "tools", type: "text", label: "Specific AI tools / skills?", placeholder: "Copilot for Security, AI SIEM, LLM security…" }
+        ],
+        tips: [
+          { when: a => (a.usage || []).includes("Securing AI/LLM systems"),
+            text: "Securing AI/LLM systems (prompt injection, model risk) is brand-new — treat real experience as a rare differentiator." }
+        ] } }
+    ],
+    specialists: [
+      { label: "Security Analyst", overlapsArea: "secops" },
+      { label: "Cloud Security Engineer", overlapsArea: "cloud_sec" },
+      { label: "Penetration Tester", overlapsArea: "offensive" },
+      { label: "GRC Analyst", overlapsArea: "grc" },
+      { label: "IAM Specialist", overlapsArea: "iam" },
+      { label: "DevOps Engineer", overlapsArea: null }
+    ],
+    profileRules: [
+      { must: ["appsec", "cloud_sec"], profile: "Application / cloud security engineer",
+        detail: "Target AppSec/cloud-security engineers. Secure SDLC and cloud posture are the filters." },
+      { must: ["secops", "iam"], profile: "SecOps / detection engineer",
+        detail: "Target SOC / detection-engineering titles. SIEM, detection, and IR are the filters." },
+      { must: ["offensive", "appsec"], profile: "Offensive security engineer",
+        detail: "Target pentest / red-team titles. Certs (OSCP) and engagement track record are the filters." },
+      { must: ["grc", "iam"], profile: "Security / GRC analyst",
+        detail: "Target GRC and identity-governance titles. Framework and audit experience are the filters." }
+    ],
+    stackCategories: [
+      { id: "siem", label: "SIEM / SOAR", placeholder: "Splunk, Sentinel, Chronicle…" },
+      { id: "cloud", label: "Cloud security", placeholder: "Wiz, Prisma, CSPM, IAM…" },
+      { id: "appsec", label: "AppSec (SAST/DAST)", placeholder: "Snyk, Checkmarx, Burp…" },
+      { id: "iam", label: "IAM", placeholder: "Okta, Entra ID, SailPoint…" },
+      { id: "vuln", label: "Vulnerability mgmt", placeholder: "Tenable, Qualys, Rapid7…" },
+      { id: "scripting", label: "Scripting", placeholder: "Python, PowerShell, Bash…" }
+    ],
+    aiUseCases: ["Threat detection", "Alert triage", "Code scanning", "Documentation", "Log analysis"],
+    metrics: ["Vulnerabilities remediated", "MTTD", "MTTR", "Compliance posture", "Incidents", "Patch time", "False-positive rate"],
+    backgrounds: BG_COMMON.concat(["Healthcare", "Financial Services", "Government / Defense", "Critical infrastructure"])
+  },
+
+  /* -------------------------------------------------- QA / TEST ENGINEER */
+  qa_engineer: {
+    label: "QA / Test Engineer",
+    icon: "✅",
+    tagline: "Automation, manual, performance, and quality",
+    blurb: "QA spans hands-on manual testing to full SDET automation engineering. The automation-vs-manual split and the tech stack are the biggest filters — pin the 70–80%.",
+    timePrompt: "“Between test automation, manual/exploratory, API, and performance testing — what three things carry most of the week, and roughly what percentage each?”",
+    focusAreas: [
+      { id: "automation", label: "Test Automation", icon: "🤖", deepDive: {
+        intro: "Automation framework and language are the hardest filters — 'has automated' isn't specific enough.",
+        questions: [
+          { id: "tools", type: "chips", label: "Automation frameworks / tools?",
+            options: ["Selenium", "Cypress", "Playwright", "Appium", "WebdriverIO", "Custom framework"] },
+          { id: "language", type: "text", label: "Language(s)?", placeholder: "Java, JavaScript/TS, Python, C#" },
+          { id: "scope", type: "radio", label: "Build frameworks or write tests within one?",
+            options: ["Build / architect frameworks (SDET)", "Write tests in existing framework", "Mix"] }
+        ],
+        tips: [
+          { when: a => a.scope === "Build / architect frameworks (SDET)",
+            text: "Building frameworks is an SDET/engineer skill set — target software-engineer-level QA and expect higher rates than manual/scripting QA." }
+        ] } },
+      { id: "manual", label: "Manual / Exploratory", icon: "🔎", deepDive: {
+        intro: "Manual and exploratory testing is a distinct discipline from automation.",
+        questions: [
+          { id: "scope", type: "chips", label: "Manual scope?",
+            options: ["Exploratory", "Test case design", "Regression", "UAT support", "Accessibility"] }
+        ], tips: [] } },
+      { id: "api", label: "API / Backend Testing", icon: "🔌", deepDive: {
+        intro: "API testing depth signals a more technical QA.",
+        questions: [
+          { id: "tools", type: "chips", label: "API testing tools?",
+            options: ["Postman", "REST Assured", "Karate", "SoapUI", "Custom scripts"] }
+        ], tips: [] } },
+      { id: "performance", label: "Performance / Load", icon: "⚡", deepDive: {
+        intro: "Performance testing is a specialized, scarcer skill.",
+        questions: [
+          { id: "tools", type: "chips", label: "Perf tools?",
+            options: ["JMeter", "k6", "Gatling", "LoadRunner", "Locust"] }
+        ],
+        tips: [
+          { when: a => (a.tools || []).length > 0,
+            text: "Performance testing is a niche within QA — if it's a must-have, screen for real load-test projects and results, not just tool exposure." }
+        ] } },
+      { id: "test_ops", label: "CI/CD & Test Ops", icon: "🚚", deepDive: {
+        intro: "Integrating tests into pipelines separates modern QA from siloed QA.",
+        questions: [
+          { id: "scope", type: "chips", label: "What's expected?",
+            options: ["Tests in CI/CD", "Test environments", "Test data management", "Reporting / dashboards"] }
+        ], tips: [] } },
+      { id: "ai", label: "AI / GenAI", icon: "🧠", deepDive: {
+        intro: "AI is entering QA via test generation, self-healing automation, and visual testing.",
+        questions: [
+          { id: "usage", type: "chips", label: "How does AI factor into this role?",
+            options: ["AI-assisted test generation", "Self-healing automation", "Visual / AI testing", "Testing AI/ML features", "Not a factor"] },
+          { id: "depth", type: "radio", label: "Depth of AI work?",
+            options: ["Core part of the role", "Occasional / augmenting", "Just AI-assisted tooling"] },
+          { id: "tools", type: "text", label: "Specific AI tools / skills?", placeholder: "Testim, Applitools, mabl, Copilot…" }
+        ],
+        tips: [
+          { when: a => (a.usage || []).includes("Testing AI/ML features"),
+            text: "Testing AI/ML systems (non-deterministic outputs, eval-based checks) is an emerging skill — screen for it specifically if it's core." }
+        ] } }
+    ],
+    specialists: [
+      { label: "SDET", overlapsArea: "automation" },
+      { label: "Manual QA Analyst", overlapsArea: "manual" },
+      { label: "Automation Engineer", overlapsArea: "automation" },
+      { label: "Performance Engineer", overlapsArea: "performance" },
+      { label: "DevOps Engineer", overlapsArea: "test_ops" },
+      { label: "Developers", overlapsArea: null }
+    ],
+    profileRules: [
+      { must: ["automation", "api"], profile: "SDET / automation engineer",
+        detail: "Target SDET titles who build frameworks and API tests. Code + framework design are the filters." },
+      { must: ["performance", "automation"], profile: "Performance / automation engineer",
+        detail: "Target performance-test engineers. Load-test results at scale are the filter." },
+      { must: ["manual", "test_ops"], profile: "QA analyst / quality lead",
+        detail: "Target QA analyst/lead titles. Test strategy and quality process are the filters." }
+    ],
+    stackCategories: [
+      { id: "automation", label: "Automation frameworks", placeholder: "Selenium, Playwright, Cypress…" },
+      { id: "management", label: "Test management", placeholder: "TestRail, Zephyr, Xray…" },
+      { id: "apiperf", label: "API / perf tools", placeholder: "Postman, JMeter, k6…" },
+      { id: "cicd", label: "CI/CD", placeholder: "Jenkins, GitHub Actions…" },
+      { id: "lang", label: "Languages", placeholder: "Java, JavaScript/TS, Python…" },
+      { id: "bugtracking", label: "Bug tracking", placeholder: "Jira, Azure DevOps…" }
+    ],
+    aiUseCases: ["Test generation", "Test-data generation", "Bug triage", "Documentation", "Log analysis"],
+    metrics: ["Defect detection rate", "Escaped defects", "Automation coverage %", "Test cycle time", "Release quality", "Flaky-test rate"],
+    backgrounds: BG_COMMON.concat(["Healthcare", "E-commerce", "Gaming"])
+  },
+
+  /* ------------------------------------------- CRM DEVELOPER / CONSULTANT */
+  crm_developer: {
+    label: "CRM Developer / Consultant",
+    icon: "🔷",
+    tagline: "Salesforce, Dynamics, and CRM platforms",
+    blurb: "CRM work is gated by platform (Salesforce vs. Dynamics vs. HubSpot) and by the config-vs-code split. An admin, a developer, and a functional consultant share the space but not the skill set. Pin platform + clouds first.",
+    timePrompt: "“Between configuration, development, integration, and reporting — what three things carry most of the week, and roughly what percentage each?”",
+    focusAreas: [
+      { id: "platform", label: "CRM Platform", icon: "🧭", deepDive: {
+        intro: "Platform is the hardest, non-negotiable filter.",
+        questions: [
+          { id: "platform", type: "radio", label: "Which platform?",
+            options: ["Salesforce", "Microsoft Dynamics 365", "HubSpot", "ServiceNow", "Oracle / SAP CRM", "Other"] },
+          { id: "certs", type: "radio", label: "Certifications?",
+            options: ["Required", "Preferred", "Not important"] }
+        ],
+        tips: [
+          { when: a => a.platform === "Salesforce" && a.certs === "Required",
+            text: "Salesforce certs (Admin, PD1/PD2, Architect) are a common screening filter — confirm exactly which ones are required." }
+        ] } },
+      { id: "clouds", label: "Clouds / Modules", icon: "🧩", deepDive: {
+        intro: "The specific cloud/module is as important as the platform.",
+        questions: [
+          { id: "modules", type: "chips", label: "Which clouds / modules?",
+            options: ["Sales Cloud", "Service Cloud", "Marketing Cloud", "Experience Cloud", "CPQ / Revenue", "Field Service", "Commerce"] }
+        ],
+        tips: [
+          { when: a => (a.modules || []).includes("Marketing Cloud"),
+            text: "Marketing Cloud (SFMC) is a distinct specialty from core Salesforce dev — don't assume overlap; target SFMC-specific experience." }
+        ] } },
+      { id: "config", label: "Configuration & Admin", icon: "🔧", deepDive: {
+        intro: "Declarative/admin work vs. code is the key skill split.",
+        questions: [
+          { id: "scope", type: "chips", label: "Declarative scope?",
+            options: ["Flows / automation", "Objects / schema", "Security / profiles / permissions", "Reports / dashboards"] }
+        ], tips: [] } },
+      { id: "development", label: "Development", icon: "💻", deepDive: {
+        intro: "Code skills (Apex/LWC/plugins) define developer vs. admin roles.",
+        questions: [
+          { id: "skills", type: "chips", label: "Development skills?",
+            options: ["Apex", "Lightning Web Components (LWC)", "Visualforce", "Dynamics plugins / C#", "JavaScript", "APIs"] }
+        ],
+        tips: [
+          { when: (a, s) => (a.skills || []).length > 0 && areaPriority(s, "development") === "must",
+            text: "Development-heavy CRM roles are a different (pricier) pool than admin/config — target developer titles and code samples." }
+        ] } },
+      { id: "integrations", label: "Integrations", icon: "🔗", deepDive: {
+        intro: "Integration scope pulls the role technical.",
+        questions: [
+          { id: "tech", type: "chips", label: "Integration tech?",
+            options: ["REST / SOAP APIs", "Middleware (MuleSoft, Boomi)", "Data loaders / ETL", "Marketing / ERP integration"] }
+        ], tips: [] } },
+      { id: "reporting", label: "Data & Reporting", icon: "📊", deepDive: {
+        intro: "Reporting and data migration are common CRM asks.",
+        questions: [
+          { id: "scope", type: "chips", label: "Scope?",
+            options: ["Dashboards / reports", "Data migration", "Data quality", "Analytics (CRM Analytics / Tableau)"] }
+        ], tips: [] } },
+      { id: "ai", label: "AI / GenAI", icon: "🧠", deepDive: {
+        intro: "CRM vendors are shipping AI fast (Salesforce Einstein/Agentforce, Copilot for Dynamics).",
+        questions: [
+          { id: "usage", type: "chips", label: "How does AI factor into this role?",
+            options: ["Einstein / Agentforce", "Copilot for Dynamics", "AI-assisted config/code", "Predictive / AI features", "Not a factor"] },
+          { id: "depth", type: "radio", label: "Depth of AI work?",
+            options: ["Core part of the role", "Occasional / augmenting", "Just AI-assisted tooling"] },
+          { id: "tools", type: "text", label: "Specific AI tools / skills?", placeholder: "Einstein, Agentforce, Copilot Studio…" }
+        ],
+        tips: [
+          { when: a => (a.usage || []).includes("Einstein / Agentforce") || (a.usage || []).includes("Copilot for Dynamics"),
+            text: "Platform AI (Einstein/Agentforce/Copilot) experience is brand-new and scarce — treat it as a differentiator, not a baseline." }
+        ] } }
+    ],
+    specialists: [
+      { label: "CRM Admin", overlapsArea: "config" },
+      { label: "CRM Developer", overlapsArea: "development" },
+      { label: "CRM / Functional Consultant", overlapsArea: "clouds" },
+      { label: "Integration Specialist", overlapsArea: "integrations" },
+      { label: "Business Analyst", overlapsArea: null },
+      { label: "Marketing Ops", overlapsArea: null }
+    ],
+    profileRules: [
+      { must: ["platform", "development"], profile: "CRM developer",
+        detail: "Target platform developers (e.g., Salesforce developer). Apex/LWC or plugin code and certs are the filters." },
+      { must: ["platform", "config"], profile: "CRM admin / consultant",
+        detail: "Target admin/consultant titles. Declarative depth and platform certs are the filters." },
+      { must: ["integrations", "development"], profile: "CRM technical / integration developer",
+        detail: "Target technical CRM engineers. APIs, middleware, and code are the filters." },
+      { must: ["clouds", "config"], profile: "Functional CRM consultant",
+        detail: "Target functional consultants named by cloud/module. That exact combo is the filter." }
+    ],
+    stackCategories: [
+      { id: "platform", label: "CRM platform", placeholder: "Salesforce, Dynamics 365, HubSpot…" },
+      { id: "dev", label: "Dev tools", placeholder: "Apex, LWC, C# plugins…" },
+      { id: "integration", label: "Integration", placeholder: "MuleSoft, Boomi, REST APIs…" },
+      { id: "reporting", label: "Reporting / BI", placeholder: "CRM Analytics, Power BI, Tableau…" },
+      { id: "data", label: "Data tools", placeholder: "Data Loader, dataloader.io…" },
+      { id: "devops", label: "DevOps / release", placeholder: "Salesforce DX, Copado, Gearset…" }
+    ],
+    aiUseCases: ["Config assistance", "Code generation", "Report generation", "Documentation", "Data cleanup"],
+    metrics: ["User adoption", "On-time delivery", "Data quality", "Automation / efficiency", "Defect rate", "Report usage"],
+    backgrounds: BG_COMMON.concat(["Financial Services", "Healthcare", "Manufacturing", "Nonprofit"])
   }
 };
 
 /* Order roles appear in the picker */
 const ROLE_ORDER = [
   "backend_engineer",
+  "fullstack_developer",
+  "mobile_developer",
   "data_engineer",
-  "devops_sre",
   "data_scientist",
   "ai_engineer",
+  "devops_sre",
+  "cloud_architect",
+  "security_engineer",
+  "qa_engineer",
+  "technical_pm",
   "erp_consultant",
-  "technical_pm"
+  "crm_developer"
 ];

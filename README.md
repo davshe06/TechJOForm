@@ -9,15 +9,23 @@ It shares its engine with the Digital & Marketing intake builder; only `roles.js
 
 ## Roles supported
 
+Every role also carries a cross-cutting **AI / GenAI** focus area (see below).
+
 | Role | Focus areas the decision tree drills into |
 |------|-------------------------------------------|
 | 🖥️ Software Engineer (Backend) | Languages & Frameworks, APIs & Services, Databases, Cloud & Infra, System Design, Messaging, Testing |
+| 🧩 Full-Stack Developer | Front-End, Back-End, Front/Back Balance, Databases, Cloud & DevOps |
+| 📱 Mobile Developer | Native Platform, Cross-Platform, UI/UX Implementation, API & Data, Performance & Release |
 | 🧱 Data Engineer | Pipelines/ETL, Warehouse/Lakehouse, Streaming, Orchestration, SQL & Modeling, Cloud Data |
-| ♾️ DevOps / SRE | CI/CD, IaC, Cloud, Containers/K8s, Observability, Reliability & On-call |
 | 🤖 Data Scientist / ML Engineer | Modeling, Programming, ML Frameworks, MLOps, Data Wrangling, Experimentation, Cloud ML |
 | 🧠 AI Engineer (GenAI / LLM) | LLM Apps, Prompt & Eval, Vector DBs/Retrieval, Fine-tuning, LLMOps, AI Infra |
-| 🏢 ERP Consultant / Analyst | Platform, Modules, Implementation, Integrations, Technical Dev, Business Analysis |
+| ♾️ DevOps / SRE | CI/CD, IaC, Cloud, Containers/K8s, Observability, Reliability & On-call |
+| ☁️ Cloud Architect | Platform Architecture, Solution Architecture, Migration & Modernization, Security & Governance, Cost & FinOps |
+| 🔒 Security Engineer | AppSec, Cloud Security, SecOps/IR, IAM & Zero Trust, Compliance & GRC, Offensive/Pen Testing |
+| ✅ QA / Test Engineer | Test Automation, Manual/Exploratory, API Testing, Performance/Load, CI/CD & Test Ops |
 | 🗓️ Technical Project / Program Manager | Delivery/SDLC, Program/Portfolio Mgmt, Agile/Methodology, Technical Fluency, Stakeholders, Budget/Vendor, Risk |
+| 🏢 ERP Consultant / Analyst | Platform, Modules, Implementation, Integrations, Technical Dev, Business Analysis |
+| 🔷 CRM Developer / Consultant | Platform, Clouds/Modules, Configuration & Admin, Development, Integrations, Data & Reporting |
 
 > **Interpretation notes:** "PM" is a **Technical Project / Program Manager** — covering both single-team project delivery and multi-team Technical Program Management (TPM). "AI" is a **GenAI/LLM AI Engineer**, kept as its own standalone category.
 
