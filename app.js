@@ -772,13 +772,25 @@ function render() {
     side.appendChild(btn);
   });
   const reset = el("button", "nav-reset", "🗑 Start new job order");
+  let armed = false, armTimer = null;
   reset.addEventListener("click", () => {
-    if (confirm("Clear all answers and start a new job order?")) {
-      state = defaultState();
-      localStorage.removeItem(STORAGE_KEY);
-      currentStep = 0;
-      render();
+    if (!armed) {
+      armed = true;
+      reset.textContent = "⚠️ Click again to clear everything";
+      reset.classList.add("armed");
+      armTimer = setTimeout(() => {
+        armed = false;
+        reset.textContent = "🗑 Start new job order";
+        reset.classList.remove("armed");
+      }, 4000);
+      return;
     }
+    clearTimeout(armTimer);
+    clearTimeout(saveTimer);
+    state = defaultState();
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    currentStep = 0;
+    render();
   });
   side.appendChild(reset);
   app.appendChild(side);
