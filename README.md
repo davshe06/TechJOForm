@@ -55,6 +55,26 @@ Adding another role is a data-only change — see **Customizing** below.
 - Cross-checks between steps: if the team already has a role that overlaps a must-have area, the app flags it.
 - Each role's answers are stored separately, so switching roles never clobbers another role's work. Everything autosaves to `localStorage`.
 
+## AI analysis (optional, via Vercel)
+
+The Review step includes an **AI Analysis** panel: one click sends the completed job order to a
+serverless endpoint (`api/analyze.js`) that asks Claude for a fillability score, gaps & red flags,
+a sourcing kit (target titles, boolean search, screening questions), and a candidate pitch. The
+result renders in the app and is included in the summary and Word/PDF export. The Anthropic API
+key lives only in the serverless function's environment — never in the browser.
+
+### Deploying the endpoint
+
+1. In [Vercel](https://vercel.com), **Add New → Project** and import this GitHub repo (defaults are fine — no build step).
+2. In the project's **Settings → Environment Variables**, add:
+   - `ANTHROPIC_API_KEY` — your Anthropic API key (required)
+   - `ACCESS_CODE` — optional shared team code; if set, the app must send it (there's a field for it under "Endpoint settings" in the AI panel)
+3. Deploy. Vercel serves the app *and* the endpoint, so using the app at `https://<project>.vercel.app` works with the default `/api/analyze` endpoint out of the box.
+4. If you keep using GitHub Pages for the app itself, open the AI panel's **Endpoint settings** once and paste `https://<project>.vercel.app/api/analyze` — it's remembered per browser.
+
+Each analysis costs on the order of a few cents (Claude Opus). The endpoint allows cross-origin
+requests so the Pages-hosted app can call it.
+
 ## Running it
 
 No build step, no dependencies. Open `index.html`, or serve the folder:
@@ -70,3 +90,4 @@ Works on GitHub Pages or any static host.
 - **`roles.js`** — all role configs plus the shared `COMMON` steps and the `APP_BRAND` shown in the sidebar. Add a role by adding an entry to `ROLES` and listing its id in `ROLE_ORDER`.
 - **`app.js`** — the generic, role-aware render engine. Reused verbatim from the sibling project; reads `APP_BRAND` for the sidebar title. No changes needed to add roles or questions.
 - **`docx.js`** — a small, self-contained Word (`.docx`) generator, so export needs no libraries.
+- **`api/analyze.js`** — the Vercel serverless AI-analysis endpoint (the only part with a dependency, `@anthropic-ai/sdk`; the static app remains dependency-free).

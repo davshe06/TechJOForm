@@ -1,0 +1,10 @@
+{
+  "name": "techjoform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tech & Engineering Job Order Intake Builder — static app plus a Vercel serverless AI-analysis endpoint.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0"
+  }
+}

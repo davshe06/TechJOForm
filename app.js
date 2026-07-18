@@ -18,7 +18,8 @@ function defaultState() {
     roleId: null,
     common: { basics: {}, logistics: {}, team: {}, closing: {} },
     roles: {},
-    notes: { pretext: "", live: "", pretextH: null, liveH: null }
+    notes: { pretext: "", live: "", pretextH: null, liveH: null },
+    aiAnalysis: null
   };
 }
 
@@ -34,6 +35,7 @@ function loadState() {
       base.common = Object.assign(base.common, saved.common || {});
       base.roles = saved.roles || {};
       base.notes = Object.assign(base.notes, saved.notes || {});
+      base.aiAnalysis = saved.aiAnalysis || null;
       return base;
     }
   } catch (e) { /* corrupted — start fresh */ }
@@ -769,6 +771,10 @@ function collectSummary() {
 
   const closing = collectConfigSection(configStepDef("closing")); if (closing) sections.push(closing);
 
+  /* AI analysis → free-text section */
+  if (state.aiAnalysis && (state.aiAnalysis.text || "").trim())
+    sections.push({ title: "AI Analysis", text: state.aiAnalysis.text.trim() });
+
   /* Persistent notes → free-text sections at the end of the output */
   if ((state.notes.live || "").trim())
     sections.push({ title: "Live Notes", text: state.notes.live.trim() });
@@ -835,6 +841,127 @@ function fileBase() {
   return base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "job-order";
 }
 
+/* ---------- AI analysis ----------
+   Calls the /api/analyze serverless endpoint (Vercel function holding the
+   Anthropic API key). Endpoint + optional team code are UI settings stored
+   under their own key, so "Start new job order" keeps them; the analysis
+   RESULT lives in job-order state and is cleared by reset. */
+
+const AI_CONFIG_KEY = "digital-jo-ai-config";
+
+function aiConfig() {
+  try {
+    const c = JSON.parse(localStorage.getItem(AI_CONFIG_KEY)) || {};
+    return { endpoint: c.endpoint || "/api/analyze", code: c.code || "" };
+  } catch (e) { return { endpoint: "/api/analyze", code: "" }; }
+}
+
+function saveAiConfig(cfg) {
+  try { localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(cfg)); } catch (e) {}
+}
+
+/* Minimal markdown renderer for the analysis output (headings, bold, lists). */
+function mdToHtml(md) {
+  const lines = esc(md).split(/\r?\n/);
+  let html = "", inList = false, para = [];
+  const flushPara = () => {
+    if (para.length) { html += "<p>" + para.join("<br>") + "</p>"; para = []; }
+  };
+  const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+  const inline = s => s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  lines.forEach(line => {
+    const h = line.match(/^(#{1,4})\s+(.*)$/);
+    const li = line.match(/^\s*[-*]\s+(.*)$/);
+    if (h) { flushPara(); closeList(); html += "<h4>" + inline(h[2]) + "</h4>"; }
+    else if (li) { flushPara(); if (!inList) { html += "<ul>"; inList = true; } html += "<li>" + inline(li[1]) + "</li>"; }
+    else if (!line.trim()) { flushPara(); closeList(); }
+    else { closeList(); para.push(inline(line)); }
+  });
+  flushPara(); closeList();
+  return html;
+}
+
+function renderAiSection(main) {
+  const box = el("div", "ai-box");
+  box.appendChild(el("div", "ai-head", "🤖 AI Analysis"));
+  box.appendChild(el("p", "q-help",
+    "Sends the completed job order to your team's AI endpoint for a fillability read, gap check, sourcing kit, and candidate pitch. The result is added to the export."));
+
+  const controls = el("div", "actions");
+  const runBtn = el("button", "btn primary", state.aiAnalysis ? "🔄 Re-analyze job order" : "✨ Analyze job order");
+  controls.appendChild(runBtn);
+  box.appendChild(controls);
+
+  /* endpoint / team-code settings, collapsed by default */
+  const cfg = aiConfig();
+  const settings = el("details", "ai-settings");
+  settings.appendChild(el("summary", null, "Endpoint settings"));
+  const epRow = el("div", "custom-add-row");
+  const epInput = el("input");
+  epInput.type = "text";
+  epInput.placeholder = "/api/analyze or https://your-app.vercel.app/api/analyze";
+  epInput.value = cfg.endpoint;
+  const codeInput = el("input");
+  codeInput.type = "text";
+  codeInput.placeholder = "Team code (optional)";
+  codeInput.value = cfg.code;
+  codeInput.style.maxWidth = "180px";
+  const persist = () => saveAiConfig({ endpoint: epInput.value.trim() || "/api/analyze", code: codeInput.value.trim() });
+  epInput.addEventListener("input", persist);
+  codeInput.addEventListener("input", persist);
+  epRow.appendChild(epInput);
+  epRow.appendChild(codeInput);
+  settings.appendChild(epRow);
+  settings.appendChild(el("p", "q-help",
+    "When the app is served from Vercel, the default /api/analyze works as-is. When hosted elsewhere (e.g. GitHub Pages), paste your Vercel deployment's full endpoint URL."));
+  box.appendChild(settings);
+
+  const status = el("div", "ai-status");
+  box.appendChild(status);
+
+  const result = el("div", "ai-result");
+  if (state.aiAnalysis && state.aiAnalysis.text) {
+    result.innerHTML = mdToHtml(state.aiAnalysis.text);
+    result.classList.add("filled");
+  }
+  box.appendChild(result);
+
+  runBtn.addEventListener("click", async () => {
+    const conf = aiConfig();
+    runBtn.disabled = true;
+    runBtn.textContent = "⏳ Analyzing… (can take up to a minute)";
+    status.textContent = "";
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (conf.code) headers["x-access-code"] = conf.code;
+      const resp = await fetch(conf.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          summary: summaryMarkdown(),
+          role: activeRole() ? activeRole().label : ""
+        })
+      });
+      let data = null;
+      try { data = await resp.json(); } catch (e) {}
+      if (!resp.ok || !data || !data.analysis) {
+        throw new Error((data && data.error) || ("Request failed (" + resp.status + ")"));
+      }
+      state.aiAnalysis = { text: data.analysis, at: new Date().toISOString() };
+      flushSave();
+      render(); // refresh the review step so the summary includes the analysis
+      return;
+    } catch (err) {
+      status.textContent = "⚠️ " + (err && err.message ? err.message : "Analysis failed — check the endpoint settings.");
+      runBtn.textContent = state.aiAnalysis ? "🔄 Re-analyze job order" : "✨ Analyze job order";
+    } finally {
+      runBtn.disabled = false;
+    }
+  });
+
+  main.appendChild(box);
+}
+
 function renderReviewStep(main) {
   main.appendChild(el("h2", null, "Review & Export"));
 
@@ -889,6 +1016,8 @@ function renderReviewStep(main) {
   printBtn.addEventListener("click", printSummary);
   actions.appendChild(copyBtn); actions.appendChild(wordBtn); actions.appendChild(printBtn);
   main.appendChild(actions);
+
+  renderAiSection(main);
 
   const summary = el("div", "summary");
   summary.appendChild(el("h3", null, esc(jobTitleLine())));

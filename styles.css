@@ -575,6 +575,53 @@ textarea { resize: vertical; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
 .btn.primary:hover { background: var(--accent-strong); color: var(--accent-contrast); }
 
+/* ---------- AI analysis ---------- */
+
+.ai-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin: 0 0 24px;
+}
+.ai-head { font-weight: 700; font-size: 15.5px; margin-bottom: 4px; }
+.ai-box .actions { margin: 12px 0 10px; }
+.ai-settings { margin: 4px 0 8px; }
+.ai-settings summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ai-settings .custom-add-row { margin-top: 8px; }
+.ai-status { font-size: 13px; color: #d63c2e; margin-top: 6px; }
+.ai-result { display: none; }
+.ai-result.filled {
+  display: block;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+  font-size: 13.5px;
+}
+.ai-result h4 {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--accent);
+}
+.ai-result p { margin: 0 0 8px; }
+.ai-result ul { margin: 0 0 8px; padding-left: 20px; }
+.ai-result li { margin-bottom: 3px; }
+.ai-result code {
+  background: var(--head-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12.5px;
+  word-break: break-all;
+}
+
 .summary {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -620,7 +667,7 @@ textarea { resize: vertical; }
     --bg: #ffffff; --panel: #ffffff; --ink: #1a2233; --muted: #5b6577;
     --line: #e2e7f0; --accent: #2456d6;
   }
-  .sidebar, .notes-panel, .step-nav, .actions, .checklist, .tip { display: none !important; }
+  .sidebar, .notes-panel, .step-nav, .actions, .checklist, .tip, .ai-box { display: none !important; }
   body, #app { background: #fff; display: block; }
   .panel { max-width: none; padding: 0; }
   .summary { border: none; padding: 0; }
