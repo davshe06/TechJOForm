@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Hydroelectric Plant — Concrete Gravity Dam &amp; Vertical Francis Powerhouse</title>
 <style>
 /* ============================================================================
@@ -209,6 +209,61 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
 #fps{position:fixed;right:326px;top:45px;z-index:12;font-family:var(--mono);font-size:10px;
   color:var(--tx3);text-align:right;pointer-events:none;
   text-shadow:0 1px 3px rgba(0,0,0,.9)}
+
+/* ============================================================================
+   SMALL SCREENS / TOUCH
+   The two side columns and the chart strip become bottom sheets driven by a
+   tab bar; only one is open at a time so the 3D view keeps most of the screen.
+   ========================================================================== */
+#mobilebar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:20;
+  gap:4px;padding:5px 6px calc(5px + env(safe-area-inset-bottom));
+  background:rgba(11,14,18,.96);border-top:1px solid var(--line);
+  backdrop-filter:blur(10px)}
+#mobilebar button{flex:1 1 0;padding:9px 4px;font-size:11px;border-radius:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@media (max-width:900px), (pointer:coarse) and (max-width:1180px){
+  #mobilebar{display:flex}
+  #left,#right{position:fixed;left:6px;right:6px;width:auto;top:auto;
+    bottom:calc(58px + env(safe-area-inset-bottom));max-height:64vh;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;gap:6px}
+  #left.open,#right.open{display:flex}
+  #left>*,#right>*{pointer-events:auto}
+  #plist{flex:0 0 auto}
+  #pitems{max-height:44vh}
+  #topbar{left:6px;right:6px;top:calc(6px + env(safe-area-inset-top));height:28px;
+    overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .ucard{flex:0 0 auto;min-width:118px;font-size:10px}
+  .sitebox{font-size:10px}
+  #bottom{left:6px;right:6px;bottom:calc(58px + env(safe-area-inset-bottom));
+    display:none;flex-direction:column;gap:6px;max-height:64vh;overflow-y:auto}
+  #bottom.open{display:flex}
+  .chartbox{width:100%}
+  .chartbox canvas{width:100%;height:auto}
+  #info{left:6px;right:6px;width:auto;top:auto;
+    bottom:calc(58px + env(safe-area-inset-bottom));max-height:64vh}
+  #fps{right:8px;top:calc(40px + env(safe-area-inset-top));font-size:9px}
+  #narr{bottom:calc(66px + env(safe-area-inset-bottom));left:6px;right:6px;
+    transform:none;max-width:none;padding:9px 12px}
+  #narr .txt{font-size:12px}
+  #alarms{top:calc(40px + env(safe-area-inset-top));left:6px;right:6px;transform:none}
+  .alarm{font-size:10.5px;text-align:center}
+  /* touch targets */
+  .panel h2{padding:10px 12px;font-size:11.5px}
+  button{padding:8px 10px;font-size:11.5px}
+  button.sm{padding:7px 7px;font-size:11px}
+  select{padding:9px 7px;font-size:12px}
+  input[type=text]{padding:9px 8px;font-size:12px}
+  input[type=range]{height:32px}
+  input[type=range]::-webkit-slider-thumb{width:20px;height:20px;margin-top:-8px}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px}
+  .slrow label{flex:0 0 74px;font-size:11px}
+  .slrow .num{flex:0 0 56px;font-size:11px}
+  .pitem{padding:8px 8px;font-size:12px}
+  .chk{padding:6px 0;font-size:11.5px}
+  .gauges{font-size:11px}
+  #tip{display:none !important}
+}
 </style>
 <script type="importmap">
 {
@@ -383,6 +438,13 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;bac
     <div class="cap" style="padding-top:5px"><span>Power</span><span id="powcap">&nbsp;</span></div>
     <canvas id="powtrace" width="420" height="74"></canvas>
   </div>
+</div>
+
+<div id="mobilebar">
+  <button data-sheet="left">Views &amp; parts</button>
+  <button data-sheet="right">Controls</button>
+  <button data-sheet="bottom">Charts</button>
+  <button id="mbclose">Hide</button>
 </div>
 
 <div id="tip"></div>
@@ -940,13 +1002,29 @@ function buildEnvTexture() {
 /* ===========================================================================
  * 3.  RENDERER, SCENE, LIGHTS, MATERIAL LIBRARY
  * ========================================================================= */
+
+/* --- render quality tier -------------------------------------------------
+ * Phones and small touch screens get a reduced drawing budget: no shadow
+ * pass, no bloom, a lower pixel ratio, coarser terrain and fewer particles.
+ * The simulation is bit-for-bit identical in every tier — only what is drawn
+ * changes.  'auto' can be overridden from the Display panel.
+ * ---------------------------------------------------------------------- */
+const Q = { mode: 'auto', low: false };
+function detectLowPower() {
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const small = matchMedia('(max-width: 900px)').matches
+    || (coarse && matchMedia('(max-width: 1180px)').matches);
+  return small || (coarse && (navigator.hardwareConcurrency || 4) <= 6);
+}
+Q.low = detectLowPower();
+
 const canvas = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({
   canvas, antialias: true, powerPreference: 'high-performance'
 });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, Q.low ? 1.25 : 2));
 renderer.setSize(innerWidth, innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = !Q.low;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.02;
@@ -958,7 +1036,18 @@ scene.fog = new THREE.Fog(0x9fb4c9, 1500, 5200);
 
 /* near/far chosen so a 24-bit depth buffer still separates a 0.1 m detail on the
    runner from a 2.5 km horizon: ratio 60 000 : 1.                            */
-const camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 0.2, 12000);
+const CAM_FOV = 46;
+const camera = new THREE.PerspectiveCamera(CAM_FOV, innerWidth / innerHeight, 0.2, 12000);
+/** A tall portrait window would otherwise see almost nothing horizontally, so
+ *  widen the vertical field of view as the aspect ratio narrows.            */
+function fitFov() {
+  const a = innerWidth / innerHeight;
+  camera.aspect = a;
+  camera.fov = a >= 1.5 ? CAM_FOV
+    : Math.min(66, CAM_FOV * Math.sqrt(1.5 / Math.max(a, 0.40)));
+  camera.updateProjectionMatrix();
+}
+fitFov();
 camera.position.set(-640, 470, 690);
 
 const controls = new OrbitControls(camera, canvas);
@@ -983,7 +1072,7 @@ const sunDir = new THREE.Vector3(-0.40, 0.70, 0.59).normalize();   // lights the
 const sun = new THREE.DirectionalLight(0xfff2dc, 3.1);
 sun.position.copy(sunDir).multiplyScalar(900);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(Q.low ? 1024 : 2048, Q.low ? 1024 : 2048);
 sun.shadow.camera.near = 200; sun.shadow.camera.far = 2000;
 sun.shadow.camera.left = -420; sun.shadow.camera.right = 420;
 sun.shadow.camera.top = 420; sun.shadow.camera.bottom = -420;
@@ -1007,6 +1096,7 @@ function addHallLights() {
     const a = new THREE.PointLight(0xffe6bc, 260, 78, 2);
     a.position.set(x, EL.genFloor + 16, L.phZ);
     scene.add(a); HALL_LIGHTS.push(a);
+    if (Q.low) continue;                       // one lamp per bay is enough
     const b = new THREE.PointLight(0xffdcae, 130, 46, 2);
     b.position.set(x, EL.turbFloor + 7, L.phZ);
     scene.add(b); HALL_LIGHTS.push(b);
@@ -1017,8 +1107,28 @@ function addHallLights() {
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.26, 0.62, 0.94);
+bloom.enabled = !Q.low;
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
+
+/** Switch quality tier at run time. 'auto' re-detects the device. */
+function applyQuality(mode) {
+  Q.mode = mode || 'auto';
+  Q.low = (Q.mode === 'low') || (Q.mode === 'auto' && detectLowPower());
+  renderer.setPixelRatio(Math.min(devicePixelRatio, Q.low ? 1.25 : 2));
+  renderer.shadowMap.enabled = !Q.low;
+  renderer.shadowMap.needsUpdate = true;
+  bloom.enabled = !Q.low;
+  /* toggling the shadow pass changes the shader programs */
+  scene.traverse((o) => {
+    if (!o.material) return;
+    const ms = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of ms) m.needsUpdate = true;
+  });
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  bloom.setSize(innerWidth, innerHeight);
+}
 
 /* ===========================================================================
  * 3b. MATERIALS
@@ -1230,7 +1340,7 @@ function terrainH(x, z) {
  * ========================================================================= */
 function buildTerrain() {
   const gp = SYS.terrain;
-  const W = 2400, D = 2600, NX = 190, NZ = 200;
+  const W = 2400, D = 2600, NX = Q.low ? 110 : 190, NZ = Q.low ? 116 : 200;
   const g = new THREE.PlaneGeometry(W, D, NX, NZ);
   g.rotateX(-Math.PI / 2);
   const pos = g.attributes.position;
@@ -1252,7 +1362,7 @@ function buildTerrain() {
   gp.add(t); reg(t, 'foundation');
 
   /* exposed rock at the abutments and in the gorge walls */
-  const rg = new THREE.PlaneGeometry(2400, 2600, 120, 130);
+  const rg = new THREE.PlaneGeometry(2400, 2600, Q.low ? 70 : 120, Q.low ? 76 : 130);
   rg.rotateX(-Math.PI / 2);
   const rp = rg.attributes.position;
   for (let i = 0; i < rp.count; i++) {
@@ -1358,7 +1468,8 @@ const WATER = { surfaces: [] };
 function buildWaterSurfaces() {
   const gp = SYS.terrain;
   /* --- reservoir ------------------------------------------------------- */
-  const rg = new THREE.PlaneGeometry(1500, 1500, 150, 150); rg.rotateX(-Math.PI / 2);
+  const rg = new THREE.PlaneGeometry(1500, 1500, Q.low ? 80 : 150, Q.low ? 80 : 150);
+  rg.rotateX(-Math.PI / 2);
   const rmat = makeWaterMat({ uFlow: new THREE.Vector2(0.004, 0.010), uAmp: 0.30, uScale: 0.020 });
   const res = new THREE.Mesh(rg, rmat);
   res.position.set(20, PS.hyd.normMaxRes, -745);
@@ -1369,7 +1480,8 @@ function buildWaterSurfaces() {
      One grid for the whole downstream reach.  Vertices that fall inside the
      dry powerhouse platform are dropped far below grade so the platform reads
      as dry land while the channel and the river stay at tailwater.          */
-  const tg = new THREE.PlaneGeometry(660, 900, 66, 90); tg.rotateX(-Math.PI / 2);
+  const tg = new THREE.PlaneGeometry(660, 900, Q.low ? 40 : 66, Q.low ? 54 : 90);
+  tg.rotateX(-Math.PI / 2);
   const tp = tg.attributes.position;
   const cx0 = 20, cz0 = 560;
   for (let i = 0; i < tp.count; i++) {
@@ -1388,7 +1500,8 @@ function buildWaterSurfaces() {
   WATER.river = tr; WATER.surfaces.push(tmat);
 
   /* --- stilling basin pool --------------------------------------------- */
-  const bg = new THREE.PlaneGeometry(196, 150, 44, 40); bg.rotateX(-Math.PI / 2);
+  const bg = new THREE.PlaneGeometry(196, 150, Q.low ? 28 : 44, Q.low ? 26 : 40);
+  bg.rotateX(-Math.PI / 2);
   const bmat = makeWaterMat({ uFlow: new THREE.Vector2(0.0, 0.34), uAmp: 0.30, uScale: 0.085 });
   const bs = new THREE.Mesh(bg, bmat);
   bs.position.set(L.spillCx, PS.hyd.twRated, L.basinZ0 + 73);
@@ -4010,7 +4123,8 @@ function updateParticles(U, dt) {
   P.pts.visible = vis;
   if (!vis) return;
   const N = P.N;
-  const active = clamp(Math.round(N * clamp(U.Q / 210, 0.06, 1)), 12, N);
+  let active = clamp(Math.round(N * clamp(U.Q / 210, 0.06, 1)), 12, N);
+  if (Q.low) active = Math.min(active, 190);          // reduced budget on phones
   const samples = U.path.samples, NS = U.path.N;
   for (let k = 0; k < active; k++) {
     const t = P.s[k];
@@ -4135,7 +4249,7 @@ function updateCavitation(U, t) {
   const on = VIS.showCav && U.cav > 0.02;
   C.p.visible = on;
   if (!on) return;
-  const n = Math.round(C.N * U.cav);
+  const n = Math.min(Math.round(C.N * U.cav), Q.low ? 80 : C.N);
   for (let k = 0; k < n; k++) {
     const o = k * 3;
     const ph = (t * 3.4 + k * 0.37) % 1;
@@ -4293,7 +4407,7 @@ function updateSpillwayFlow(dt, t) {
     B.geo.computeVertexNormals();
     B.mat.opacity = clamp(0.35 + q / 900, 0.3, 0.95);
     /* spray: ballistic particles launched at the toe */
-    const nA = clamp(Math.round(B.NP * q / 1200), 8, B.NP);
+    const nA = clamp(Math.round(B.NP * q / 1200), 8, Q.low ? 70 : B.NP);
     for (let k = 0; k < nA; k++) {
       const o = k * 3;
       B.sl[k] -= dt;
@@ -5661,6 +5775,9 @@ transmissionLine: {
  * 8.  USER INTERFACE
  * ========================================================================= */
 const $ = (id) => document.getElementById(id);
+/* touch devices get tap-to-select instead of hover-to-preview */
+const COARSE = matchMedia('(pointer: coarse)').matches;
+const isSheetLayout = () => getComputedStyle($('mobilebar')).display !== 'none';
 const UI = { hover: null, sel: null, selObj: null, dim: false, tween: null,
              view: 'full', isolate: 'all', walk: null, walkStep: 0, walkT: 0 };
 
@@ -5870,6 +5987,7 @@ function pickAt(cx, cy) {
   return null;
 }
 function onPointerMove(e) {
+  if (COARSE) return;                       // no hover on touch: tapping selects
   if (e.buttons) { $('tip').style.display = 'none'; return; }
   const h = pickAt(e.clientX, e.clientY);
   const tip = $('tip');
@@ -5909,6 +6027,7 @@ function selectPart(id, obj, instId, unit) {
   if (UI.selObj) { hlBox.box.copy(objBox(UI.selObj, UI.selInstance)); hlBox.visible = true; }
   renderer.toneMappingExposure = 0.68;
   UI.dim = true;
+  if (isSheetLayout()) closeSheets();       // give the info sheet the screen
   $('info').classList.add('show');
   renderInfo();
   for (const el of document.querySelectorAll('.pitem'))
@@ -5940,6 +6059,30 @@ function renderInfo() {
     `<div class="brow" style="margin-top:10px"><button class="sm" id="frameBtn">Frame in view</button></div>`;
   const fb = $('frameBtn');
   if (fb) fb.onclick = () => { if (UI.selObj) frameObject(UI.selObj); };
+}
+
+/* ---- bottom sheets for small screens ---------------------------------- */
+function closeSheets() {
+  for (const k of ['left', 'right', 'bottom']) $(k).classList.remove('open');
+  for (const b of document.querySelectorAll('#mobilebar button[data-sheet]'))
+    b.classList.remove('on');
+}
+function initMobileUI() {
+  const bar = $('mobilebar');
+  for (const b of bar.querySelectorAll('button[data-sheet]')) {
+    b.onclick = () => {
+      const k = b.dataset.sheet, wasOpen = $(k).classList.contains('open');
+      closeSheets();
+      $('info').classList.remove('show');
+      if (!wasOpen) { $(k).classList.add('open'); b.classList.add('on'); }
+    };
+  }
+  $('mbclose').onclick = () => { closeSheets(); $('info').classList.remove('show'); };
+  /* start with nothing covering the view; the tab bar says where things are */
+  if (isSheetLayout()) {
+    closeSheets();
+    pushAlarm('i', 'Touch layout: drag to orbit, pinch to zoom, tap a component to select it.');
+  }
 }
 
 /* ===========================================================================
@@ -6115,7 +6258,14 @@ function buildControls() {
     ['wire', 'Wireframe'], ['labels', 'Unit numbers'], ['terrain', 'Terrain & water bodies'],
     ['bloom', 'Bloom'], ['hill', 'Hill chart'], ['traces', 'Pressure / power traces']
   ];
-  $('toggles').innerHTML = '<div class="lbl">Overlays</div>' +
+  $('toggles').innerHTML =
+    '<div class="lbl">Render quality</div>' +
+    '<select id="qsel">' +
+    '<option value="auto">Auto — detects this device</option>' +
+    '<option value="high">High — shadows, bloom, full particles</option>' +
+    '<option value="low">Low — no shadows or bloom, fewer particles</option>' +
+    '</select><div class="hint">Physics is identical in every tier; only what is drawn changes.</div>' +
+    '<div class="lbl" style="margin-top:9px">Overlays</div>' +
     tg.map(([k, n]) => `<label class="chk"><input type="checkbox" data-v="${k}"
       ${VIS[k] ? 'checked' : ''}> ${n}</label>`).join('') +
     extra.map(([k, n]) => `<label class="chk"><input type="checkbox" data-x="${k}"
@@ -6132,6 +6282,11 @@ function buildControls() {
       if (k === 'hill') $('hillbox').style.display = v ? '' : 'none';
       if (k === 'traces') $('tracebox').style.display = v ? '' : 'none';
     };
+  $('qsel').value = Q.mode;
+  $('qsel').onchange = (e) => {
+    applyQuality(e.target.value);
+    pushAlarm('i', 'Render quality: ' + (Q.low ? 'low' : 'high'));
+  };
   $('watercolor').onchange = (e) => { VIS.mode = e.target.value; };
   $('infoclose').onclick = deselect;
   $('psearch').oninput = (e) => buildPartList(e.target.value);
@@ -6784,6 +6939,7 @@ function boot() {
   buildControls();
   buildPartList();
   buildHillChart();
+  initMobileUI();
   syncUnitUI();
   setIsolate('all');
 
@@ -6837,8 +6993,8 @@ function boot() {
   VERIFY = V;
   /* expose the model for inspection from the console (read-only convenience;
      nothing is persisted anywhere) */
-  window.plant = { PS, L, S, UNITS, HYD, WG, SPW, VIS, verification: V,
-                   solveTurbine, etaAtUnit, spillwayBayFlow, tailwaterFor };
+  window.plant = { PS, L, S, UNITS, HYD, WG, SPW, VIS, Q, STATS, verification: V,
+                   solveTurbine, etaAtUnit, spillwayBayFlow, tailwaterFor, applyQuality };
   pushAlarm(failed.length ? 'w' : 'i',
     failed.length ? `${failed.length} verification check(s) failed — see console`
                   : `All ${V.length} verification checks passed — see console for detail`);
@@ -6851,6 +7007,8 @@ function boot() {
   addEventListener('click', onClick);
   addEventListener('keydown', onKey);
   addEventListener('resize', onResize);
+  addEventListener('orientationchange', () => setTimeout(onResize, 250));
+  onResize();
 }
 let VERIFY = [];
 
@@ -6871,8 +7029,7 @@ function onKey(e) {
   else if (k === 'arrowleft') stepShaft(-1);
 }
 function onResize() {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
+  fitFov();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
   bloom.setSize(innerWidth, innerHeight);
@@ -6923,7 +7080,6 @@ function frame(now) {
   updateSpillwayFlow(visDt, S.t);
   updateSiteMeshes(rawDt, S.t);
   updateEnergyRibbon();
-  if (UI.selObj) hlBox.box.copy(objBox(UI.selObj, UI.selInstance));
 
   /* interface refresh at a fixed rate, independent of the simulation clock */
   uiAcc += rawDt;
@@ -6931,6 +7087,9 @@ function frame(now) {
     uiAcc = 0;
     updateGauges();
     updateStatusStrip();
+    /* the selection outline only needs the interface cadence, and setFromObject
+       is far too expensive to run on every frame */
+    if (UI.selObj) hlBox.box.copy(objBox(UI.selObj, UI.selInstance));
     drawHill();
     drawTraces();
     if (UI.sel) renderInfo();
